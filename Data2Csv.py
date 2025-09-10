@@ -1,7 +1,6 @@
 from docx import Document
 import csv
 from openpyxl import load_workbook
-from openpyxl.cell.cell import Cell
 
 def extract_question_and_code(input_file, cell):
     question_parts = []
@@ -35,10 +34,11 @@ def extract_question_and_code(input_file, cell):
 
 
 def document_to_data(input_file, output_file):
-    # ---------------- DOCX ----------------
     structured_data = []
     index_counter = 1
     correct = []
+
+    # ---------------- DOCX ----------------
     if input_file.endswith(".docx"):
         doc = Document(input_file)
         for table in doc.tables:
@@ -48,10 +48,14 @@ def document_to_data(input_file, output_file):
 
                 #extract answer
                 answers_raw = table.rows[row_counter].cells[2].text.strip().split("\n")
-                answers = [
-                    a.strip()[3:].strip() if a.strip()[:2] in ["A.", "B.", "C.", "D."] else a.strip()
-                    for a in answers_raw if a.strip()
-                ]
+                answers = []
+
+                for a in answers_raw:
+                    cleaned = a.strip()
+                    cleaned = cleaned.lstrip("ABCD. ").strip()  # xóa các ký tự này ở đầu
+                    answers.append(cleaned)
+
+                # đảm bảo có 4 đáp án
                 while len(answers) < 4:
                     answers.append("")
 
@@ -95,6 +99,17 @@ def document_to_data(input_file, output_file):
             #extract correct answer
             correct.append(row[10].value.strip())
 
+            # extract hints
+            check = "Đúng:"
+            hint = ""
+            for i in range(3, 10, 2):
+                cell_val = row[i].value
+                if cell_val and isinstance(cell_val, str):
+                    stripped = cell_val.strip().lstrip(check).strip()
+                    if stripped != cell_val.strip():
+                        hint = stripped
+                        break
+
             record = [
                 index_counter,  # index
                 "",  # context
@@ -107,7 +122,7 @@ def document_to_data(input_file, output_file):
                 answers[2],  # C
                 answers[3],  # D
                 correct[index-1],  # correct
-                "",  # hint
+                hint,  # hint
                 "",  # set_question_id
                 "",  # tags
             ]
@@ -123,8 +138,8 @@ def document_to_data(input_file, output_file):
         writer.writerows(structured_data)
 
 document_to_data(
-    r"E:/Document/NEU/ScoreUp 2.0/Word collection/Input/Cau hoi midterm/Cau hoi midterm.xlsx",
-    r"E:/Document/NEU/ScoreUp 2.0/Word collection/Output/CSV/filtered_Cau hoi midterm_questions.csv"
+    r"E:/Document/NEU/ScoreUp 2.0/Documents collection/Input/Cau hoi midterm/Cau hoi midterm.xlsx",
+    r"E:/Document/NEU/ScoreUp 2.0/Documents collection/Output/CSV/filtered_Cau hoi midterm_questions.csv"
 )
 
 print("Successful")
