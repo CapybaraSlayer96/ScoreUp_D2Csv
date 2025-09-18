@@ -1,6 +1,7 @@
 from docx import Document
 import csv
 from openpyxl import load_workbook
+import re
 
 def extract_question_and_code(input_file, cell):
     question_parts = []
@@ -17,18 +18,21 @@ def extract_question_and_code(input_file, cell):
             if len(tbl.rows) == 1 and len(tbl.columns) == 1:
                 code_parts.append(tbl.rows[0].cells[0].text)
                 code_parts.append("\n")
+        question_text = " ".join(q.strip() for q in question_parts if q.strip())
+        code_text = "\n".join(c.strip() for c in code_parts if c.strip())
 
     # ---------------- XLSX ----------------
     if input_file.endswith(".xlsx"):
-        if cell.value:
-            # Font check (only works if workbook was not loaded with data_only=True)
-            if cell.font.name == "Courier New":
-                code_parts.append(str(cell.value))
-            else:
-                question_parts.append(str(cell.value))
+        # Regex tìm code block
+        pattern = r"```(.*?)```"
+        code_blocks = re.findall(pattern, cell.value, flags=re.DOTALL)
 
-    question_text = " ".join(q.strip() for q in question_parts if q.strip())
-    code_text = "\n".join(c.strip() for c in code_parts if c.strip())
+        # Text thường (ngoài code)
+        question_text = re.sub(pattern, "", cell.value, flags=re.DOTALL).strip()
+
+        # Làm sạch code block, giữ nguyên indent
+        code_parts = [c.strip("\n") for c in code_blocks]
+        code_text = "\n".join(c.strip() for c in code_parts if c.strip())
 
     return question_text, code_text
 
@@ -87,22 +91,22 @@ def document_to_data(input_file, output_file):
         sheet = wb.active
         for index, row in enumerate(sheet.iter_rows(min_row=2, values_only=False), start = 1):
             #extract question
-            question_text, code_text = extract_question_and_code(input_file, row[1])
+            question_text, code_text = extract_question_and_code(input_file, row[0])
 
             # extract answer
             answers = []
-            for i in range(2, 9, 2):
+            for i in range(1, 8, 2):
                 answers.append(row[i].value.strip())
             while len(answers) < 4:
                 answers.append("")
 
             #extract correct answer
-            correct.append(row[10].value.strip())
+            correct.append(row[9].value.strip())
 
             # extract hints
-            check = "Đúng:"
+            check = "Đúng,"
             hint = ""
-            for i in range(3, 10, 2):
+            for i in range(2, 9, 2):
                 cell_val = row[i].value
                 if cell_val and isinstance(cell_val, str):
                     stripped = cell_val.strip().lstrip(check).strip()
@@ -136,10 +140,3 @@ def document_to_data(input_file, output_file):
         writer = csv.writer(csvfile, quoting=csv.QUOTE_MINIMAL)
         writer.writerow(headers)
         writer.writerows(structured_data)
-
-document_to_data(
-    r"E:/Document/NEU/ScoreUp 2.0/Documents collection/Input/Cau hoi midterm/Cau hoi midterm.xlsx",
-    r"E:/Document/NEU/ScoreUp 2.0/Documents collection/Output/CSV/filtered_Cau hoi midterm_questions.csv"
-)
-
-print("Successful")
