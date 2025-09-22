@@ -36,6 +36,8 @@ def extract_question_and_code(input_file, cell):
 
     return question_text, code_text
 
+def safe_strip(val):
+    return val.strip() if isinstance(val, str) else (val if val else "")
 
 def document_to_data(input_file, output_file):
     structured_data = []
@@ -91,28 +93,36 @@ def document_to_data(input_file, output_file):
         sheet = wb.active
         for index, row in enumerate(sheet.iter_rows(min_row=2, values_only=False), start = 1):
             #extract question
-            question_text, code_text = extract_question_and_code(input_file, row[0])
+            question_text = safe_strip(row[0].value)
+
+            #extract code
+            code_text = ""
+            code_raw = row[1].value
+            if code_raw:
+                code_parts = code_raw.splitlines()  # tách theo dòng
+                code_text = "\n".join(line.rstrip() for line in code_parts if line.strip())
 
             # extract answer
             answers = []
-            for i in range(1, 8, 2):
-                answers.append(row[i].value.strip())
+            for i in range (2,6):
+                answers.append(safe_strip(row[i].value))
             while len(answers) < 4:
                 answers.append("")
 
             #extract correct answer
-            correct.append(row[9].value.strip())
+            correct = safe_strip(row[6].value)
 
-            # extract hints
-            check = "Đúng,"
-            hint = ""
-            for i in range(2, 9, 2):
-                cell_val = row[i].value
-                if cell_val and isinstance(cell_val, str):
-                    stripped = cell_val.strip().lstrip(check).strip()
-                    if stripped != cell_val.strip():
-                        hint = stripped
-                        break
+            #extract hints
+            # check = "Đúng,"
+            # hint = ""
+            # for i in range(2, 9, 2):
+            #     cell_val = row[i].value
+            #     if cell_val and isinstance(cell_val, str):
+            #         stripped = cell_val.strip().lstrip(check).strip()
+            #         if stripped != cell_val.strip():
+            #             hint = stripped
+            #             break
+            hint = safe_strip(row[7].value)
 
             record = [
                 index_counter,  # index
@@ -125,7 +135,7 @@ def document_to_data(input_file, output_file):
                 answers[1],  # B
                 answers[2],  # C
                 answers[3],  # D
-                correct[index-1],  # correct
+                correct,  # correct
                 hint,  # hint
                 "",  # set_question_id
                 "",  # tags
@@ -140,3 +150,6 @@ def document_to_data(input_file, output_file):
         writer = csv.writer(csvfile, quoting=csv.QUOTE_MINIMAL)
         writer.writerow(headers)
         writer.writerows(structured_data)
+
+# document_to_data('E:/Document/NEU/Project/ScoreUp 2.0/Documents collection/Input/Chapter4.xlsx', 'E:/Document/NEU/Project/ScoreUp 2.0/Documents collection/Output/CSV/Chapter4_question.csv')
+# print("Successful")
