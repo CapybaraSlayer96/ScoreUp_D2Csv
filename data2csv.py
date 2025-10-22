@@ -46,7 +46,6 @@ def document_to_data(input_file, output_file, tags, start_index):
     structured_data = []
     index_counter = start_index
 
-
     # ---------------- DOCX ----------------
     if input_file.endswith(".docx"):
         doc = Document(input_file)
@@ -62,7 +61,8 @@ def document_to_data(input_file, output_file, tags, start_index):
                 for a in raw_answers:
                     cleaned_answers = a.strip()
                     cleaned_answers = re.sub(r"^[A-D](?:[\.\)]|\s)\s*", "", cleaned_answers)
-                    answers.append(cleaned_answers)
+                    if cleaned_answers not in answers:
+                        answers.append(cleaned_answers)
                 while len(answers) < 4:
                     answers.append("")
 
@@ -106,9 +106,10 @@ def document_to_data(input_file, output_file, tags, start_index):
             # extract answer
             answers = []
             for i in range (2,6):
-                answers.append(safe_strip(row[i].value))
-            while len(answers) < 4:
-                answers.append("")
+                val = safe_strip(row[i].value)
+                if val not in answers:
+                    answers.append(val)
+            answers += [""] * (4 - len(answers))
 
             #extract correct answer
             correct = safe_strip(row[6].value)
