@@ -56,7 +56,7 @@ def document_to_data(input_file, output_file, tags, start_index):
 
                 #extract answer
                 cell_val = table.rows[row_counter].cells[2].text
-                raw_answers = cell_val.strip().split("\n") if cell_val else []
+                raw_answers = cell_val.split("\n") if cell_val else []
                 answers = []
                 for a in raw_answers:
                     cleaned_answers = a.strip()
@@ -106,7 +106,7 @@ def document_to_data(input_file, output_file, tags, start_index):
             # extract answer
             answers = []
             for i in range (2,6):
-                val = safe_strip(row[i].value)
+                val = row[i].value
                 if val not in answers:
                     answers.append(val)
             answers += [""] * (4 - len(answers))
